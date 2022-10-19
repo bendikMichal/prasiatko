@@ -1,4 +1,3 @@
-from faulthandler import cancel_dump_traceback_later
 import pygame, sys, time
 from random import *
 from math import *
@@ -78,10 +77,14 @@ player_temlate = {
 }
 
 timeout = 0
+clock = pygame.time.Clock()
+fps = 20
 
 end = False
 main = True
 while main:
+    clock.tick(fps)
+
     mousepressed = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
