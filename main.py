@@ -1,6 +1,66 @@
-import pygame, sys, time
+
+
+import sys
+from tkinter import *
+
+global player_list, usernames
+player_list = []
+usernames = []
+player_id = 0
+
+player_temlate = {
+    "name" : "",
+    "placed" : [],
+    "cards_owned" : 0,
+    "taken" : False
+}
+
+def Exit():
+    sys.exit()
+
+def AddUser():
+    if len(player_list) < 4:
+        name = INPUT.get()
+        if not name in usernames:
+            usernames.append(name)
+            PLAYERS.append(Label(root, text = name, font = "Arial 8"))
+            PLAYERS[-1].place(x = 10, y = 200 + len(PLAYERS) * 20)
+            player_list.append({
+                "name" : name,
+                "placed" : [],
+                "cards_owned" : 0,
+                "taken" : False
+            })
+
+def Setup():
+    global root, INPUT, PLAYERS
+    root = Tk()
+    root.geometry('300x600')
+    root.resizable(0, 0)
+
+
+    TITLE = Label(root, text = "Prasiatko", font = "Arial 20")
+    INPUT = Entry(root)
+    PLAYERS = []
+    ADD_BUTTON = Button(root, text = "Add", command = AddUser)
+    START_BUTTON = Button(root, text = "Start", command = root.destroy)
+    EXIT_BUTTON = Button(root, text = "Quit", command = Exit)
+
+    TITLE.place(x = 10, y = 100)
+    INPUT.place(x = 10, y = 200)
+    ADD_BUTTON.place(x = 200, y = 200)
+    START_BUTTON.place(x = 10, y = 500)
+    EXIT_BUTTON.place(x = 10, y = 540)
+
+    root.mainloop()
+
+Setup()
+
+
+import pygame, time
 from random import *
 from math import *
+
 pygame.init()
 
 width, height = 800, 800
@@ -54,27 +114,6 @@ for i in range(32):
             card_collection[j] = temp.copy()
 
 
-player_list = [
-    {
-    "name" : "robko",
-    "placed" : [],
-    "cards_owned" : 0,
-    "taken" : False
-    },
-    {
-    "name" : "timco",
-    "placed" : [],
-    "cards_owned" : 0,
-    "taken" : False
-    }
-]
-player_id = 0
-player_temlate = {
-    "name" : "",
-    "placed" : [],
-    "cards_owned" : 0,
-    "taken" : False
-}
 
 timeout = 0
 clock = pygame.time.Clock()
@@ -176,8 +215,10 @@ while main:
 
         if winner != " ":
             text = font.render(winner + ' has won!', False, (0, 0, 0))
-            Window.blit(text, (0, 0))
+            Window.blit(text, (10, 0))
 
+    text = font.render(player_list[player_id]["name"] + "'s turn'", False, (0, 0, 0))
+    Window.blit(text, (10, height - 40))
 
     pygame.display.update()
 
