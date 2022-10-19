@@ -63,6 +63,7 @@ player_temlate = {
 
 timeout = 0
 
+end = False
 main = True
 while main:
     mousepressed = False
@@ -91,9 +92,10 @@ while main:
 
     for card in card_collection:
         radiusEx = 0
+        no_option = True
         if abs(card["angle"] - mouse_angle) < pi / 32:
             radiusEx = 40
-            if mousepressed:
+            if mousepressed and not end:
                 if card["hidden"] and len(player_list[player_id]["placed"]) == 0:
                     hidden_cards_num -= 1
                     player_list[player_id]["cards_owned"] += 1
@@ -123,10 +125,22 @@ while main:
                         player_list[player_id]["placed"].append(card)
                         card_collection.remove(card)
                     
-                         
+        if len(placed_cards) > 0:
+            if (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) or hidden_cards_num > 0:# or len(player_list[player_id]["placed"]) >= 0:
+                no_option = False
                         
         if card["hidden"] or card["owner"] == player_list[player_id]["name"]:
             blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
+
+    if no_option and len(placed_cards) > 1:
+        placed_cards[-1]["owner"] = player_list[player_id]["name"]
+        placed_cards[-1]["pos_multiplier"] = 1
+        card_collection.append(placed_cards[-1])
+        placed_cards.remove(placed_cards[-1])
+        player_list[player_id]["cards_owned"] += 1
+        player_list[player_id]["placed"].append(placed_cards[-1])
+        print("------------------------------------ added card!!!")
+        end = True
 
     for card in placed_cards:
         radiusEx = 0
@@ -138,6 +152,7 @@ while main:
         for player in player_list:
             if player["cards_owned"] <= 0:
                 winner = player["name"]
+                end = True
         
         if winner != " ":
             text = font.render(winner + ' has won!', False, (0, 0, 0))
