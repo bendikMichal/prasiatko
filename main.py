@@ -1,5 +1,5 @@
 from faulthandler import cancel_dump_traceback_later
-import pygame, sys
+import pygame, sys, time
 from random import *
 from math import *
 pygame.init()
@@ -30,9 +30,12 @@ hidden_cards_num = 32
 center = [width / 2, height / 2]
 radius = 250
 
+all_angles = [i * (6.28 / 32) for i in range(32)]
+
 for i in range(32):
-    angle = 6.28 / 32 * i
-    y = floor(i / 8) 
+    angle = choice(all_angles)
+    # angle = 6.28 / 32 * i
+    y = floor(i / 8)
     x = i - 8 * y + 1
     card_collection.append({
         "x" : x,
@@ -42,23 +45,36 @@ for i in range(32):
         "hidden" : True,
         "owner" : ""
     })
+    all_angles.remove(angle)
+
+for i in range(32):
+    for j in range(i + 1, 32):
+        if card_collection[i]["angle"] > card_collection[j]["angle"]:
+            temp = card_collection[i].copy()
+            card_collection[i] = card_collection[j].copy()
+            card_collection[j] = temp.copy()
+
 
 player_list = [
     {
     "name" : "robko",
     "placed" : [],
-    "cards_owned" : 0
-    }, 
+    "cards_owned" : 0,
+    "taken" : False
+    },
     {
     "name" : "timco",
     "placed" : [],
-    "cards_owned" : 0
+    "cards_owned" : 0,
+    "taken" : False
     }
 ]
 player_id = 0
 player_temlate = {
     "name" : "",
-    "placed" : []
+    "placed" : [],
+    "cards_owned" : 0,
+    "taken" : False
 }
 
 timeout = 0
@@ -72,7 +88,7 @@ while main:
             main = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             mousepressed = True
-    
+
     mouse = pygame.mouse.get_pos()
     mouse_angle = (atan2(mouse[0] - center[0], mouse[1] - center[1]) - pi / 2) % (2 * pi)
 
@@ -80,9 +96,10 @@ while main:
         timeout -= 1
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_n] and timeout <= 0 and len(player_list[player_id]["placed"]) > 0:
+    if keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]):
         timeout = 60
         player_list[player_id]["placed"] = []
+        player_list[player_id]["taken"] = False
         player_id += 1
         if player_id >= len(player_list):
             player_id = 0
@@ -90,12 +107,12 @@ while main:
     Window.fill((250, 240, 240))
 
 
+    no_option = True
     for card in card_collection:
         radiusEx = 0
-        no_option = True
         if abs(card["angle"] - mouse_angle) < pi / 32:
             radiusEx = 40
-            if mousepressed and not end:
+            if mousepressed and not end and not player_list[player_id]["taken"]:
                 if card["hidden"] and len(player_list[player_id]["placed"]) == 0:
                     hidden_cards_num -= 1
                     player_list[player_id]["cards_owned"] += 1
@@ -124,26 +141,28 @@ while main:
                         placed_cards.append(card)
                         player_list[player_id]["placed"].append(card)
                         card_collection.remove(card)
-                    
+
         if len(placed_cards) > 0:
-            if (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) or hidden_cards_num > 0 or len(player_list[player_id]["placed"]) > 0:
+            if (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) and card["owner"] == player_list[player_id]["name"]:
                 no_option = False
-                        
+
         if card["hidden"] or card["owner"] == player_list[player_id]["name"]:
             blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
 
-    if no_option and len(placed_cards) > 1:
+    if no_option and len(placed_cards) > 0 and hidden_cards_num <= 0 and len(player_list[player_id]["placed"]) <= 0 and not player_list[player_id]["taken"]:
         placed_cards[-1]["owner"] = player_list[player_id]["name"]
         placed_cards[-1]["pos_multiplier"] = 1
         card_collection.append(placed_cards[-1])
         placed_cards.remove(placed_cards[-1])
         player_list[player_id]["cards_owned"] += 1
-        player_list[player_id]["placed"].append(placed_cards[-1])
+        if len(placed_cards) > 0:
+            player_list[player_id]["placed"].append(placed_cards[-1])
+        player_list[player_id]["taken"] = True
 
     for card in placed_cards:
         radiusEx = 0
         blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
-        
+
 
     if hidden_cards_num <= 0:
         winner = " "
@@ -151,11 +170,11 @@ while main:
             if player["cards_owned"] <= 0:
                 winner = player["name"]
                 end = True
-        
+
         if winner != " ":
             text = font.render(winner + ' has won!', False, (0, 0, 0))
             Window.blit(text, (0, 0))
-            
+
 
     pygame.display.update()
 
