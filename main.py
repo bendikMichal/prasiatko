@@ -126,7 +126,7 @@ while main:
                         card_collection.remove(card)
                     
         if len(placed_cards) > 0:
-            if (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) or hidden_cards_num > 0:# or len(player_list[player_id]["placed"]) >= 0:
+            if (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) or hidden_cards_num > 0 or len(player_list[player_id]["placed"]) > 0:
                 no_option = False
                         
         if card["hidden"] or card["owner"] == player_list[player_id]["name"]:
@@ -139,8 +139,6 @@ while main:
         placed_cards.remove(placed_cards[-1])
         player_list[player_id]["cards_owned"] += 1
         player_list[player_id]["placed"].append(placed_cards[-1])
-        print("------------------------------------ added card!!!")
-        end = True
 
     for card in placed_cards:
         radiusEx = 0
