@@ -38,7 +38,17 @@ def AddUser():
 def SetUser():
     global username
     username = INPUT.get()
+    if len(player_list) < 1 and not singleplayer:
+        if not username in usernames:
+            usernames.append(username)
+            player_list.append({
+                "name" : username,
+                "placed" : [],
+                "cards_owned" : 0,
+                "taken" : False
+            })
     info("singleplayer: " + str(singleplayer) + ", username: " + username)
+
 
 def SwitchSingle():
     global singleplayer
@@ -87,6 +97,7 @@ else:
     DISCONNECT = "DISCONNECT"
 
     try:
+        info("attempting to connect to server")
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect(ADDR)
     except:
@@ -99,7 +110,7 @@ else:
         client.send(text)
 
     # message(DISCONNECT)
-    message(f"name: {username}")
+    message(f"name:{username}")
 
 
 import pygame, time
@@ -183,7 +194,7 @@ while main:
         timeout -= 1
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]):
+    if keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and singleplayer:
         timeout = 60
         player_list[player_id]["placed"] = []
         player_list[player_id]["taken"] = False

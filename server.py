@@ -14,7 +14,13 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server.bind(ADDR)
 
+
+names = []
+
+
 def handleClient(connection, addr):
+    global names
+
     connected = True
     while connected:
         msg = connection.recv(MSG_SIZE)
@@ -23,7 +29,10 @@ def handleClient(connection, addr):
         if msg == DISCONNECT:
             connected = False
         elif len(msg) > 0:
-            message(msg)
+            if msg[:5] == "name:":
+                names.append(msg[5:])
+            else:
+                message(msg)
 
     info(f"{addr} has left")
     connection.close()
