@@ -10,6 +10,8 @@ usernames = []
 username = ""
 singleplayer = False
 player_id = 0
+SERVER_IP = ""
+# 172.16.2.160 
 
 player_temlate = {
     "name" : "",
@@ -36,8 +38,9 @@ def AddUser():
             })
 
 def SetUser():
-    global username
-    username = INPUT.get()
+    global username, SERVER_IP
+    SERVER_IP = SERVER_IP_INPUT.get()
+    username = INPUT.get()[:32]
     if len(player_list) < 1 and not singleplayer:
         if not username in usernames:
             usernames.append(username)
@@ -47,7 +50,7 @@ def SetUser():
                 "cards_owned" : 0,
                 "taken" : False
             })
-    info("singleplayer: " + str(singleplayer) + ", username: " + username)
+    info("singleplayer: " + str(singleplayer) + ", username: " + username + ", server ip: " + SERVER_IP)
 
 
 def SwitchSingle():
@@ -55,13 +58,16 @@ def SwitchSingle():
     singleplayer = not singleplayer
 
 def Setup():
-    global root, INPUT, PLAYERS
+    global root, INPUT, PLAYERS, SERVER_IP_INPUT
     root = Tk()
     root.geometry('300x600')
     root.resizable(0, 0)
 
 
     TITLE = Label(root, text = "Prasiatko", font = "Arial 20")
+    SERVER_IP_TITLE = Label(root, text = "Server IP:", font = "Arial 8")
+    USERNAME_TITLE = Label(root, text = "Username:", font = "Arial 8")
+    SERVER_IP_INPUT = Entry(root)
     INPUT = Entry(root)
     PLAYERS = []
     ADD_BUTTON = Button(root, text = "Add", command = AddUser)
@@ -71,10 +77,13 @@ def Setup():
     SINGLEPLAYER = Checkbutton(root, text = "SINGLEPLAYER", command = SwitchSingle)
 
     TITLE.place(x = 10, y = 100)
-    INPUT.place(x = 10, y = 200)
+    SERVER_IP_TITLE.place(x = 10, y = 180)
+    USERNAME_TITLE.place(x = 10, y = 200)
+    SERVER_IP_INPUT.place(x = 80, y = 180)
+    INPUT.place(x = 80, y = 200)
     SINGLEPLAYER.place(x = 10, y = 150)
-    ADD_BUTTON.place(x = 200, y = 200)
-    SET_BUTTON.place(x = 200, y = 240)
+    ADD_BUTTON.place(x = 240, y = 200)
+    SET_BUTTON.place(x = 240, y = 240)
     START_BUTTON.place(x = 10, y = 500)
     EXIT_BUTTON.place(x = 10, y = 540)
 
@@ -89,7 +98,6 @@ else:
     import socket, sys
 
     PORT = 5050
-    SERVER_IP = "172.16.2.160"
     ADDR = (SERVER_IP, PORT)
 
     MSG_SIZE = 64
@@ -194,6 +202,8 @@ while main:
         timeout -= 1
 
     keys = pygame.key.get_pressed()
+
+    # next player in singleplayer mode
     if keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and singleplayer:
         timeout = 60
         player_list[player_id]["placed"] = []
@@ -247,6 +257,7 @@ while main:
         if card["hidden"] or card["owner"] == player_list[player_id]["name"]:
             blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
 
+    # giving player a card when he has nothing to place
     if no_option and len(placed_cards) > 0 and hidden_cards_num <= 0 and len(player_list[player_id]["placed"]) <= 0 and not player_list[player_id]["taken"]:
         placed_cards[-1]["owner"] = player_list[player_id]["name"]
         placed_cards[-1]["pos_multiplier"] = 1
@@ -257,11 +268,13 @@ while main:
             player_list[player_id]["placed"].append(placed_cards[-1])
         player_list[player_id]["taken"] = True
 
+    # displaying placed cards
     for card in placed_cards:
         radiusEx = 0
         blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
 
 
+    # checking if someone has won
     if hidden_cards_num <= 0:
         winner = " "
         for player in player_list:
@@ -279,6 +292,6 @@ while main:
     pygame.display.update()
 
 pygame.quit()
-if singleplayer:
+if not singleplayer:
     message(DISCONNECT)
 sys.exit()
