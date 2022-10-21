@@ -2,10 +2,13 @@
 
 import sys
 from tkinter import *
+from messager import *
 
 global player_list, usernames
 player_list = []
 usernames = []
+username = ""
+singleplayer = False
 player_id = 0
 
 player_temlate = {
@@ -19,7 +22,7 @@ def Exit():
     sys.exit()
 
 def AddUser():
-    if len(player_list) < 4:
+    if len(player_list) < 4 and singleplayer:
         name = INPUT.get()
         if not name in usernames:
             usernames.append(name)
@@ -32,6 +35,15 @@ def AddUser():
                 "taken" : False
             })
 
+def SetUser():
+    global username
+    username = INPUT.get()
+    info("singleplayer: " + str(singleplayer) + ", username: " + username)
+
+def SwitchSingle():
+    global singleplayer
+    singleplayer = not singleplayer
+
 def Setup():
     global root, INPUT, PLAYERS
     root = Tk()
@@ -43,18 +55,51 @@ def Setup():
     INPUT = Entry(root)
     PLAYERS = []
     ADD_BUTTON = Button(root, text = "Add", command = AddUser)
+    SET_BUTTON = Button(root, text = "Set", command = SetUser)
     START_BUTTON = Button(root, text = "Start", command = root.destroy)
     EXIT_BUTTON = Button(root, text = "Quit", command = Exit)
+    SINGLEPLAYER = Checkbutton(root, text = "SINGLEPLAYER", command = SwitchSingle)
 
     TITLE.place(x = 10, y = 100)
     INPUT.place(x = 10, y = 200)
+    SINGLEPLAYER.place(x = 10, y = 150)
     ADD_BUTTON.place(x = 200, y = 200)
+    SET_BUTTON.place(x = 200, y = 240)
     START_BUTTON.place(x = 10, y = 500)
     EXIT_BUTTON.place(x = 10, y = 540)
 
     root.mainloop()
 
 Setup()
+
+if singleplayer:
+    info("singleplayer enabled")
+
+else:
+    import socket, sys
+
+    PORT = 5050
+    SERVER_IP = "172.16.2.160"
+    ADDR = (SERVER_IP, PORT)
+
+    MSG_SIZE = 64
+    FORTMAT = "utf-8"
+    DISCONNECT = "DISCONNECT"
+
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(ADDR)
+    except:
+        info("No such server is available.")
+        sys.exit()
+
+
+    def message(text):
+        text = (text + ' ' * (MSG_SIZE - len(text))).encode(FORTMAT)
+        client.send(text)
+
+    # message(DISCONNECT)
+    message(f"name: {username}")
 
 
 import pygame, time
@@ -223,4 +268,6 @@ while main:
     pygame.display.update()
 
 pygame.quit()
+if singleplayer:
+    message(DISCONNECT)
 sys.exit()
