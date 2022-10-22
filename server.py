@@ -1,4 +1,4 @@
-import socket, threading, os
+import socket, threading, os, time
 from messager import *
 from sys import platform
 
@@ -15,10 +15,12 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server.bind(ADDR)
 
+orders = []
 
 users = {}
 userTemplate = {
-    "name": ""
+    "name": "",
+    "ip": ""
 }
 currentID = 0
 
@@ -26,9 +28,18 @@ currentID = 0
 def handleClient(connection, addr, userID):
     global users, userTemplate, currentID
     users[userID] = userTemplate
+    users[userID]["ip"] = addr[0]
 
     connected = True
     while connected:
+        time.sleep(0.1)
+        for order in orders:
+            if order[0] == "kick" and addr[0] == order[1]:
+                info("{0}, {1} has been kicked".format(addr, users[userID]["name"]))
+                connection.close()
+                del users[userID]
+                return
+
         msg = connection.recv(MSG_SIZE)
         msg = msg.decode(FORTMAT).strip()
 
@@ -43,18 +54,42 @@ def handleClient(connection, addr, userID):
             else:
                 message(msg)
 
+
     info("{0}, {1} has left".format(addr, users[userID]["name"]))
     connection.close()
+    del users[userID]
 
 def handleCommand():
-    command = input()
-    if command == "exit":
-        os._exit(1)
+    global users, orders
+
+    while True:
+        time.sleep(0.1)
+
+        command = input()
+        if command == "exit":
+            os._exit(1)
+        elif command == "list":
+            print(users)
+        elif len(command.split()) > 1:
+            if command.split()[0] == "kick":
+                orders.append(["kick", command.split()[1]])
+
+def main():
+    global users, currentID
+
+    while True:
+        time.sleep(0.1)
+
+        if len(users) < currentID:
+            currentID = 0
 
 
 def startServer():
     inputThread = threading.Thread(target = handleCommand)
     inputThread.start()
+
+    mainThread = threading.Thread(target = main)
+    mainThread.start()
 
     userID = 0
     server.listen()
