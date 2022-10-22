@@ -1,8 +1,6 @@
 
-
-import sys
+import sys, messager
 from tkinter import *
-from messager import *
 
 global player_list, usernames
 player_list = []
@@ -50,7 +48,7 @@ def SetUser():
                 "cards_owned" : 0,
                 "taken" : False
             })
-    info("singleplayer: " + str(singleplayer) + ", username: " + username + ", server ip: " + SERVER_IP)
+    messager.info("singleplayer: " + str(singleplayer) + ", username: " + username + ", server ip: " + SERVER_IP)
 
 
 def SwitchSingle():
@@ -92,7 +90,7 @@ def Setup():
 Setup()
 
 if singleplayer:
-    info("singleplayer enabled")
+    messager.info("singleplayer enabled")
 
 else:
     import socket, sys
@@ -103,13 +101,14 @@ else:
     MSG_SIZE = 64
     FORTMAT = "utf-8"
     DISCONNECT = "DISCONNECT"
+    END_TURN = "next"
 
     try:
-        info("attempting to connect to server")
+        messager.info("attempting to connect to server")
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect(ADDR)
     except:
-        info("No such server is available.")
+        messager.info("No such server is available.")
         sys.exit()
 
 
@@ -205,12 +204,14 @@ while main:
 
     # next player in singleplayer mode
     if keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and singleplayer:
-        timeout = 60
+        timeout = 30
         player_list[player_id]["placed"] = []
         player_list[player_id]["taken"] = False
         player_id += 1
         if player_id >= len(player_list):
             player_id = 0
+    elif keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and not singleplayer:
+        message(END_TURN)
 
     Window.fill((250, 240, 240))
 

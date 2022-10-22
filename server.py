@@ -9,17 +9,23 @@ ADDR = (SERVER_IP, PORT)
 MSG_SIZE = 64
 FORTMAT = "utf-8"
 DISCONNECT = "DISCONNECT"
+END_TURN = "next"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server.bind(ADDR)
 
 
-names = []
+users = {}
+userTemplate = {
+    "name": ""
+}
+currentID = 0
 
 
-def handleClient(connection, addr):
-    global names
+def handleClient(connection, addr, userID):
+    global users, userTemplate, currentID
+    users[userID] = userTemplate
 
     connected = True
     while connected:
@@ -28,13 +34,16 @@ def handleClient(connection, addr):
 
         if msg == DISCONNECT:
             connected = False
-        elif len(msg) > 0:
+        elif len(msg) > 0 and currentID == userID:
             if msg[:5] == "name:":
-                names.append(msg[5:])
+                users[userID]["name"] = msg[5:]
+            elif msg == END_TURN:
+                currentID += 1
+                info("next from {0}".format(users[userID]["name"]))
             else:
                 message(msg)
 
-    info(f"{addr} has left")
+    info("{0}, {1} has left".format(addr, users[userID]["name"]))
     connection.close()
 
 def handleCommand():
@@ -47,13 +56,15 @@ def startServer():
     inputThread = threading.Thread(target = handleCommand)
     inputThread.start()
 
+    userID = 0
     server.listen()
     while True:
 
         connection, addr = server.accept()
 
-        newThread = threading.Thread(target = handleClient, args = (connection, addr))
+        newThread = threading.Thread(target = handleClient, args = (connection, addr, userID))
 
+        userID += 1
         info(f"{addr} joined")
         newThread.start()
 
