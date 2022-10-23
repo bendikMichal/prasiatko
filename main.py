@@ -1,5 +1,5 @@
 
-import sys, messager
+import sys, messager, time
 from tkinter import *
 
 global player_list, usernames
@@ -93,15 +93,16 @@ if singleplayer:
     messager.info("singleplayer enabled")
 
 else:
-    import socket, sys
+    import socket, sys, threading, os
 
     PORT = 5050
     ADDR = (SERVER_IP, PORT)
 
-    MSG_SIZE = 64
+    MSG_SIZE = 128
     FORTMAT = "utf-8"
     DISCONNECT = "DISCONNECT"
     END_TURN = "next"
+    KICK = "kick"
 
     try:
         messager.info("attempting to connect to server")
@@ -109,7 +110,7 @@ else:
         client.connect(ADDR)
     except:
         messager.info("No such server is available.")
-        sys.exit()
+        os._exit(1)
 
 
     def message(text):
@@ -119,8 +120,25 @@ else:
     # message(DISCONNECT)
     message(f"name:{username}")
 
+    def listener():
+        global client
 
-import pygame, time
+        while True:
+            time.sleep(0.1)
+
+            msg = client.recv(MSG_SIZE)
+            msg = msg.decode(FORTMAT).strip()
+
+            if msg == KICK:
+                message(DISCONNECT)
+                os._exit(1)
+
+
+    serverListener = threading.Thread(target = listener)
+    serverListener.start()
+
+
+import pygame
 from random import *
 from math import *
 
@@ -295,4 +313,4 @@ while main:
 pygame.quit()
 if not singleplayer:
     message(DISCONNECT)
-sys.exit()
+os._exit(1)
