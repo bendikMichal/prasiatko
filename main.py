@@ -89,6 +89,10 @@ def Setup():
 
 Setup()
 
+card_collection = []
+placed_cards = []
+hidden_cards_num = 32
+
 waiting = not singleplayer
 if singleplayer:
     messager.info("singleplayer enabled")
@@ -99,7 +103,7 @@ else:
     PORT = 5050
     ADDR = (SERVER_IP, PORT)
 
-    MSG_SIZE = 128
+    MSG_SIZE = 256
     FORMAT = "utf-8"
     DISCONNECT = "DISCONNECT"
     END_TURN = "next"
@@ -123,7 +127,7 @@ else:
     message(f"name:{username}")
 
     def listener():
-        global client, waiting
+        global client, waiting, card_angles, card_collection
 
         while True:
             time.sleep(0.1)
@@ -134,11 +138,31 @@ else:
             if msg == KICK:
                 message(DISCONNECT)
                 os._exit(1)
+
             elif msg == GO:
                 waiting = False
                 messager.info("my TURRRN")
                 player_list[player_id]["placed"] = []
                 player_list[player_id]["taken"] = False
+
+            elif msg[:6] == "cards:":
+                card_angles = msg[6:]
+                card_angles = card_angles.split(";")
+
+                card_collection = []
+                for i in range(32):
+                    if not card_angles[i] == '':
+                        angle = float(card_angles[i])
+                        y = floor(i / 8)
+                        x = i - 8 * y + 1
+                        card_collection.append({
+                            "x" : x,
+                            "y" : y,
+                            "pos_multiplier" : 1,
+                            "angle" : angle,
+                            "hidden" : True,
+                            "owner" : ""
+                        })
 
 
     serverListener = threading.Thread(target = listener)
@@ -170,36 +194,34 @@ cards_img = pygame.image.load("data/karty.png")
 
 card_size = [77, 123]
 
-card_collection = []
-placed_cards = []
-hidden_cards_num = 32
 
 center = [width / 2, height / 2]
 radius = 250
 
 all_angles = [i * (6.28 / 32) for i in range(32)]
 
-for i in range(32):
-    angle = choice(all_angles)
-    # angle = 6.28 / 32 * i
-    y = floor(i / 8)
-    x = i - 8 * y + 1
-    card_collection.append({
-        "x" : x,
-        "y" : y,
-        "pos_multiplier" : 1,
-        "angle" : angle,
-        "hidden" : True,
-        "owner" : ""
-    })
-    all_angles.remove(angle)
+if singleplayer:
+    for i in range(32):
+        angle = choice(all_angles)
+        # angle = 6.28 / 32 * i
+        y = floor(i / 8)
+        x = i - 8 * y + 1
+        card_collection.append({
+            "x" : x,
+            "y" : y,
+            "pos_multiplier" : 1,
+            "angle" : angle,
+            "hidden" : True,
+            "owner" : ""
+        })
+        all_angles.remove(angle)
 
-for i in range(32):
-    for j in range(i + 1, 32):
-        if card_collection[i]["angle"] > card_collection[j]["angle"]:
-            temp = card_collection[i].copy()
-            card_collection[i] = card_collection[j].copy()
-            card_collection[j] = temp.copy()
+    for i in range(32):
+        for j in range(i + 1, 32):
+            if card_collection[i]["angle"] > card_collection[j]["angle"]:
+                temp = card_collection[i].copy()
+                card_collection[i] = card_collection[j].copy()
+                card_collection[j] = temp.copy()
 
 timeout = 0
 clock = pygame.time.Clock()

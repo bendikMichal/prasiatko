@@ -1,12 +1,14 @@
 import socket, threading, os, time
 from messager import *
+from random import *
+from math import *
 from sys import platform
 
 PORT = 5050
 SERVER_IP = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER_IP, PORT)
 
-MSG_SIZE = 128
+MSG_SIZE = 256
 FORMAT = "utf-8"
 DISCONNECT = "DISCONNECT"
 END_TURN = "next"
@@ -28,6 +30,10 @@ userTemplate = {
 }
 currentID = 0
 
+card_collection = []
+card_angles = []
+placed_cards = []
+hidden_cards_num = 32
 
 def clientListener(connection, addr, userID):
     global users, currentID
@@ -55,8 +61,14 @@ def clientListener(connection, addr, userID):
             else:
                 message(msg)
 
+
+
 def handleClient(connection, addr, userID):
-    global users, userTemplate, currentID, orders
+    global users, userTemplate, currentID, orders, card_angles
+
+    def message(text):
+        text = (text + ' ' * (MSG_SIZE - len(text))).encode(FORMAT)
+        connection.send(text)
 
     users[userID] = userTemplate.copy()
     users[userID]["ip"] = addr[0]
@@ -65,6 +77,12 @@ def handleClient(connection, addr, userID):
     listener = threading.Thread(target = clientListener, args = (connection, addr, userID))
     listener.start()
 
+    angles_string = ""
+    for a in card_angles:
+        angles_string += (";" * (len(angles_string) > 0)) + str(a)[:4]
+
+    message("cards:" + angles_string)
+
     connected = True
     while connected:
         time.sleep(0.1)
@@ -72,12 +90,19 @@ def handleClient(connection, addr, userID):
         if len(users) > 0 and userID in users:
             if users[userID]["waiting"] and currentID == userID:
                 users[userID]["waiting"] = False
-                connection.send(GO.encode(FORMAT))
+
+                angles_string = ""
+                for a in card_angles:
+                    angles_string += (";" * (len(angles_string) > 0)) + str(a)[:4]
+
+                message("cards:" + angles_string)
+
+                message(GO)
                 info(users[userID]["name"] + "'s turn")
 
         for order in orders:
             if order[0] == "kick" and addr[0] == order[1]:
-                connection.send(KICK.encode(FORMAT))
+                message(KICK)
                 info("{0}, {1} has been kicked".format(addr, users[userID]["name"]))
                 connected = False
                 connection.close()
@@ -100,7 +125,27 @@ def handleCommand():
                 orders.append(["kick", command.split()[1]])
 
 def main():
-    global users, currentID
+    global users, currentID, card_collection, card_angles, placed_cards, hidden_cards_num
+
+    all_angles = [i * (6.28 / 32) for i in range(32)]
+
+    for i in range(32):
+        angle = choice(all_angles)
+        # angle = 6.28 / 32 * i
+        y = floor(i / 8)
+        x = i - 8 * y + 1
+        card_collection.append({
+            "x" : x,
+            "y" : y,
+            "pos_multiplier" : 1,
+            "angle" : angle,
+            "hidden" : True,
+            "owner" : ""
+        })
+        all_angles.remove(angle)
+
+    for card in card_collection:
+        card_angles.append(card["angle"])
 
     while True:
         time.sleep(0.1)
