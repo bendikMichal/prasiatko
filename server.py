@@ -7,10 +7,11 @@ SERVER_IP = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER_IP, PORT)
 
 MSG_SIZE = 128
-FORTMAT = "utf-8"
+FORMAT = "utf-8"
 DISCONNECT = "DISCONNECT"
 END_TURN = "next"
 KICK = "kick"
+GO = "go"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -22,7 +23,8 @@ users = {}
 userTemplate = {
     "name": "",
     "ip": "",
-    "addr": ""
+    "addr": "",
+    "waiting": True
 }
 currentID = 0
 
@@ -35,7 +37,7 @@ def clientListener(connection, addr, userID):
         time.sleep(0.1)
 
         msg = connection.recv(MSG_SIZE)
-        msg = msg.decode(FORTMAT).strip()
+        msg = msg.decode(FORMAT).strip()
 
         if msg == DISCONNECT:
             connected = False
@@ -43,11 +45,12 @@ def clientListener(connection, addr, userID):
             connection.close()
             del users[userID]
 
-        elif len(msg) > 0 and users[userID]["addr"] == addr[1]:
+        elif len(msg) > 0:
             if msg[:5] == "name:":
                 users[userID]["name"] = msg[5:]
             elif msg == END_TURN:
                 currentID += 1
+                users[userID]["waiting"] = True
                 info("next from {0}".format(users[userID]["name"]))
             else:
                 message(msg)
@@ -55,15 +58,9 @@ def clientListener(connection, addr, userID):
 def handleClient(connection, addr, userID):
     global users, userTemplate, currentID, orders
 
-    if len(users) == 0:
-        users[userID] = userTemplate.copy()
-        users[userID]["ip"] = addr[0]
-        users[userID]["addr"] = addr[1]
-
-    elif not userID in users:
-        users[userID] = userTemplate.copy()
-        users[userID]["ip"] = addr[0]
-        users[userID]["addr"] = addr[1]
+    users[userID] = userTemplate.copy()
+    users[userID]["ip"] = addr[0]
+    users[userID]["addr"] = addr[1]
 
     listener = threading.Thread(target = clientListener, args = (connection, addr, userID))
     listener.start()
@@ -72,9 +69,15 @@ def handleClient(connection, addr, userID):
     while connected:
         time.sleep(0.1)
 
+        if len(users) > 0 and userID in users:
+            if users[userID]["waiting"] and currentID == userID:
+                users[userID]["waiting"] = False
+                connection.send(GO.encode(FORMAT))
+                info(users[userID]["name"] + "'s turn")
+
         for order in orders:
             if order[0] == "kick" and addr[0] == order[1]:
-                connection.send(KICK.encode(FORTMAT))
+                connection.send(KICK.encode(FORMAT))
                 info("{0}, {1} has been kicked".format(addr, users[userID]["name"]))
                 connected = False
                 connection.close()
@@ -105,8 +108,8 @@ def main():
         if len(users) > 0:
             if max(users) < currentID:
                 currentID = 0
-                if not currentID in users:
-                    currentID += 1
+            if not currentID in users:
+                currentID += 1
 
 
 def startServer():

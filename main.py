@@ -89,6 +89,7 @@ def Setup():
 
 Setup()
 
+waiting = not singleplayer
 if singleplayer:
     messager.info("singleplayer enabled")
 
@@ -99,10 +100,11 @@ else:
     ADDR = (SERVER_IP, PORT)
 
     MSG_SIZE = 128
-    FORTMAT = "utf-8"
+    FORMAT = "utf-8"
     DISCONNECT = "DISCONNECT"
     END_TURN = "next"
     KICK = "kick"
+    GO = "go"
 
     try:
         messager.info("attempting to connect to server")
@@ -114,24 +116,27 @@ else:
 
 
     def message(text):
-        text = (text + ' ' * (MSG_SIZE - len(text))).encode(FORTMAT)
+        text = (text + ' ' * (MSG_SIZE - len(text))).encode(FORMAT)
         client.send(text)
 
     # message(DISCONNECT)
     message(f"name:{username}")
 
     def listener():
-        global client
+        global client, waiting
 
         while True:
             time.sleep(0.1)
 
             msg = client.recv(MSG_SIZE)
-            msg = msg.decode(FORTMAT).strip()
+            msg = msg.decode(FORMAT).strip()
 
             if msg == KICK:
                 message(DISCONNECT)
                 os._exit(1)
+            elif msg == GO:
+                waiting = False
+                messager.info("my TURRRN")
 
 
     serverListener = threading.Thread(target = listener)
@@ -228,8 +233,9 @@ while main:
         player_id += 1
         if player_id >= len(player_list):
             player_id = 0
-    elif keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and not singleplayer:
+    elif keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and not singleplayer and not waiting:
         message(END_TURN)
+        waiting = True
 
     Window.fill((250, 240, 240))
 
@@ -305,7 +311,10 @@ while main:
             text = font.render(winner + ' has won!', False, (0, 0, 0))
             Window.blit(text, (10, 0))
 
-    text = font.render(player_list[player_id]["name"] + "'s turn'", False, (0, 0, 0))
+    if not waiting:
+        text = font.render(player_list[player_id]["name"] + "'s turn", False, (0, 0, 0))
+    else:
+        text = font.render("waiting...", False, (0, 0, 0))
     Window.blit(text, (10, height - 40))
 
     pygame.display.update()
