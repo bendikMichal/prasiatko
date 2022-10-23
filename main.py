@@ -137,6 +137,8 @@ else:
             elif msg == GO:
                 waiting = False
                 messager.info("my TURRRN")
+                player_list[player_id]["placed"] = []
+                player_list[player_id]["taken"] = False
 
 
     serverListener = threading.Thread(target = listener)
@@ -198,8 +200,6 @@ for i in range(32):
             temp = card_collection[i].copy()
             card_collection[i] = card_collection[j].copy()
             card_collection[j] = temp.copy()
-
-
 
 timeout = 0
 clock = pygame.time.Clock()
