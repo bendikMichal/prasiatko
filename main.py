@@ -27,7 +27,7 @@ def AddUser():
         if not name in usernames:
             usernames.append(name)
             PLAYERS.append(Label(root, text = name, font = "Arial 8"))
-            PLAYERS[-1].place(x = 10, y = 200 + len(PLAYERS) * 20)
+            PLAYERS[-1].place(x = 10, y = 400 + len(PLAYERS) * 20)
             player_list.append({
                 "name" : name,
                 "placed" : [],
@@ -52,8 +52,17 @@ def SetUser():
 
 
 def SwitchSingle():
-    global singleplayer
+    global singleplayer, usernames, player_list, username, PLAYERS, INPUT, root
     singleplayer = not singleplayer
+
+    if not singleplayer:
+        usernames = usernames[:1]
+        player_list = player_list[:1]
+        for i in range(len(PLAYERS)):
+            PLAYERS[i].destroy()
+
+        PLAYERS = []
+        username = INPUT.get()[:32]
 
 def Setup():
     global root, INPUT, PLAYERS, SERVER_IP_INPUT
@@ -61,8 +70,8 @@ def Setup():
     root.geometry('300x600')
     root.resizable(0, 0)
 
-
-    TITLE = Label(root, text = "Prasiatko", font = "Arial 20")
+    LOGO_IMG = PhotoImage(file = "./data/logo.png")
+    TITLE = Label(root, image = LOGO_IMG)
     SERVER_IP_TITLE = Label(root, text = "Server IP:", font = "Arial 8")
     USERNAME_TITLE = Label(root, text = "Username:", font = "Arial 8")
     SERVER_IP_INPUT = Entry(root)
@@ -74,14 +83,14 @@ def Setup():
     EXIT_BUTTON = Button(root, text = "Quit", command = Exit)
     SINGLEPLAYER = Checkbutton(root, text = "SINGLEPLAYER", command = SwitchSingle)
 
-    TITLE.place(x = 10, y = 100)
-    SERVER_IP_TITLE.place(x = 10, y = 180)
-    USERNAME_TITLE.place(x = 10, y = 200)
-    SERVER_IP_INPUT.place(x = 80, y = 180)
-    INPUT.place(x = 80, y = 200)
-    SINGLEPLAYER.place(x = 10, y = 150)
-    ADD_BUTTON.place(x = 240, y = 200)
-    SET_BUTTON.place(x = 240, y = 240)
+    TITLE.place(x = 0, y = 0)
+    SERVER_IP_TITLE.place(x = 10, y = 380)
+    USERNAME_TITLE.place(x = 10, y = 400)
+    SERVER_IP_INPUT.place(x = 80, y = 380)
+    INPUT.place(x = 80, y = 400)
+    SINGLEPLAYER.place(x = 10, y = 350)
+    ADD_BUTTON.place(x = 240, y = 400)
+    SET_BUTTON.place(x = 240, y = 440)
     START_BUTTON.place(x = 10, y = 500)
     EXIT_BUTTON.place(x = 10, y = 540)
 
