@@ -14,6 +14,7 @@ DISCONNECT = "DISCONNECT"
 END_TURN = "next"
 KICK = "kick"
 GO = "go"
+TAKEN = "taken"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -60,16 +61,26 @@ def clientListener(connection, addr, userID):
                 users[userID]["waiting"] = True
                 info("next from {0}".format(users[userID]["name"]))
 
+            elif msg == TAKEN:
+                placed_cards[-1]["owner"] = users[userID]["name"]
+                placed_cards[-1]["pos_multiplier"] = 1
+                #placed_cards[-1]["hidden"] = True
+                card_collection.append(placed_cards[-1].copy())
+                placed_cards.remove(placed_cards[-1])
+                msg = ""
+                info("Player " + users[userID]["name"] + " has TAKEN!")
+
             elif msg[:6] == "turnd:":
                 turned_string = msg[6:]
                 turned_string = turned_string.split(";")
                 for t in turned_string:
                     for card in card_collection:
                         card_id = int(card["x"] + card["y"] * 8)
-                        if card_id == int(t):
-                            card["hidden"] = False
-                            card["owner"] = users[userID]["name"]
-                            hidden_cards_num -= 1
+                        if t != '':
+                            if card_id == int(t):
+                                card["hidden"] = False
+                                card["owner"] = users[userID]["name"]
+                                hidden_cards_num -= 1
 
             elif msg[:6] == "place:":
                 placed_string = msg[6:]
@@ -77,10 +88,11 @@ def clientListener(connection, addr, userID):
                 for p in placed_string:
                     for card in card_collection:
                         card_id = int(card["x"] + card["y"] * 8)
-                        if int(p) == card_id:
-                            card["pos_multiplier"] = 0
-                            placed_cards.append(card)
-                            card_collection.remove(card)
+                        if not p == '':
+                            if int(p) == card_id:
+                                card["pos_multiplier"] = 0
+                                placed_cards.append(card)
+                                card_collection.remove(card)
 
             else:
                 message(msg)

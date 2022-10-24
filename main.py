@@ -12,6 +12,7 @@ player_id = 0
 SERVER_IP = ""
 # 172.16.2.160 
 
+no_option = True
 player_temlate = {
     "name" : "",
     "placed" : [],
@@ -121,6 +122,7 @@ else:
     END_TURN = "next"
     KICK = "kick"
     GO = "go"
+    TAKEN = "taken"
 
     try:
         messager.info("attempting to connect to server")
@@ -139,7 +141,7 @@ else:
     message(f"name:{username}")
 
     def listener():
-        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id
+        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id, no_option
 
         while True:
             time.sleep(0.1)
@@ -153,6 +155,7 @@ else:
 
             elif msg == GO:
                 waiting = False
+                no_option = True
                 messager.info("my TURRRN")
                 player_list[player_id]["placed"] = []
                 player_list[player_id]["taken"] = False
@@ -209,7 +212,9 @@ else:
                         card_id = int(card["x"] + card["y"] * 8)
                         if not o == '':
                             if card_id == int(o):
-                                card_collection.remove(card)
+                                #card_collection.remove(card)
+                                card["owner"] = "1234567890abcdefghijklmnopqrstuvwxyz1234567890"
+                                card["hidden"] = False
 
 
     serverListener = threading.Thread(target = listener)
@@ -302,30 +307,44 @@ while main:
         if player_id >= len(player_list):
             player_id = 0
     elif keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and not singleplayer and not waiting:
-
         turned_string = ""
         for t in turned_ids:
             turned_string += (";" * (len(turned_string) > 0)) + str(t)[:4]
         message("turnd:" + turned_string)
+        turned_ids = []
 
         placed_string = ""
         for p in placed_ids:
             placed_string += (";" * (len(placed_string) > 0)) + str(p)[:4]
         message("place:" + placed_string)
+        placed_ids = []
+
+        if player_list[player_id]["taken"]:
+            message(TAKEN)
+            messager.info("takeiejaijaieijrajereanrefj")
 
         message(END_TURN)
+
+        player_list[player_id]["placed"] = []
+        player_list[player_id]["taken"] = False
         waiting = True
 
     Window.fill((250, 240, 240))
 
+    if not singleplayer:
+        hidden_cards_num = 0
 
-    no_option = True
+    if singleplayer:
+        no_option = True
     for card in card_collection:
+        if not singleplayer and card["hidden"]:
+            hidden_cards_num += 1
+
         radiusEx = 0
         if abs(card["angle"] - mouse_angle) < pi / 32:
             radiusEx = 40
             i = card["x"] + card["y"] * 8
-            if mousepressed and not end and not player_list[player_id]["taken"]:
+            if mousepressed and not end and not player_list[player_id]["taken"] and not waiting:
                 if card["hidden"] and len(player_list[player_id]["placed"]) == 0:
                     hidden_cards_num -= 1
                     player_list[player_id]["cards_owned"] += 1
@@ -367,15 +386,16 @@ while main:
             blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
 
     # giving player a card when he has nothing to place
-    if no_option and len(placed_cards) > 0 and hidden_cards_num <= 0 and len(player_list[player_id]["placed"]) <= 0 and not player_list[player_id]["taken"]:
+    if no_option and len(placed_cards) > 0 and hidden_cards_num <= 0 and len(player_list[player_id]["placed"]) <= 0 and not player_list[player_id]["taken"] and not waiting:
         placed_cards[-1]["owner"] = player_list[player_id]["name"]
         placed_cards[-1]["pos_multiplier"] = 1
-        card_collection.append(placed_cards[-1])
+        card_collection.append(placed_cards[-1].copy())
         placed_cards.remove(placed_cards[-1])
         player_list[player_id]["cards_owned"] += 1
         if len(placed_cards) > 0:
-            player_list[player_id]["placed"].append(placed_cards[-1])
+            player_list[player_id]["placed"].append(placed_cards[-1].copy())
         player_list[player_id]["taken"] = True
+        no_option = False
 
     # displaying placed cards
     for card in placed_cards:
