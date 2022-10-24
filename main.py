@@ -1,6 +1,7 @@
 
 import sys, messager, time
 from tkinter import *
+from math import *
 
 global player_list, usernames
 player_list = []
@@ -99,7 +100,9 @@ def Setup():
 Setup()
 
 card_collection = []
+turned_ids = []
 placed_cards = []
+placed_ids = []
 hidden_cards_num = 32
 
 waiting = not singleplayer
@@ -109,7 +112,7 @@ if singleplayer:
 else:
     import socket, sys, threading, os
 
-    PORT = 5050
+    PORT = 5151
     ADDR = (SERVER_IP, PORT)
 
     MSG_SIZE = 256
@@ -136,7 +139,7 @@ else:
     message(f"name:{username}")
 
     def listener():
-        global client, waiting, card_angles, card_collection
+        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id
 
         while True:
             time.sleep(0.1)
@@ -173,6 +176,41 @@ else:
                             "owner" : ""
                         })
 
+            elif msg[:6] == "place:":
+                cards_placed = msg[6:]
+                cards_placed = cards_placed.split(";")
+                placed_cards = []
+                for p in cards_placed:
+                    for card in card_collection:
+                        card_id = int(card["x"] + card["y"] * 8)
+                        if not p == '':
+                            if card_id == int(p):
+                                card["pos_multiplier"] = 0
+                                card["hidden"] = False
+                                placed_cards.append(card)
+                                card_collection.remove(card)
+
+            elif msg[:6] == "owned:":
+                cards_owned = msg[6:]
+                cards_owned = cards_owned.split(";")
+                for o in cards_owned:
+                    for card in card_collection:
+                        card_id = int(card["x"] + card["y"] * 8)
+                        if not o == '':
+                            if card_id == int(o):
+                                card["owner"] = player_list[player_id]["name"]
+                                card["hidden"] = False
+
+            elif msg[:6] == "other:":
+                cards_others = msg[6:]
+                cards_others = cards_others.split(";")
+                for o in cards_others:
+                    for card in card_collection:
+                        card_id = int(card["x"] + card["y"] * 8)
+                        if not o == '':
+                            if card_id == int(o):
+                                card_collection.remove(card)
+
 
     serverListener = threading.Thread(target = listener)
     serverListener.start()
@@ -180,7 +218,6 @@ else:
 
 import pygame
 from random import *
-from math import *
 
 pygame.init()
 
@@ -265,6 +302,17 @@ while main:
         if player_id >= len(player_list):
             player_id = 0
     elif keys[pygame.K_n] and timeout <= 0 and (len(player_list[player_id]["placed"]) > 0 or player_list[player_id]["taken"]) and not singleplayer and not waiting:
+
+        turned_string = ""
+        for t in turned_ids:
+            turned_string += (";" * (len(turned_string) > 0)) + str(t)[:4]
+        message("turnd:" + turned_string)
+
+        placed_string = ""
+        for p in placed_ids:
+            placed_string += (";" * (len(placed_string) > 0)) + str(p)[:4]
+        message("place:" + placed_string)
+
         message(END_TURN)
         waiting = True
 
@@ -276,12 +324,14 @@ while main:
         radiusEx = 0
         if abs(card["angle"] - mouse_angle) < pi / 32:
             radiusEx = 40
+            i = card["x"] + card["y"] * 8
             if mousepressed and not end and not player_list[player_id]["taken"]:
                 if card["hidden"] and len(player_list[player_id]["placed"]) == 0:
                     hidden_cards_num -= 1
                     player_list[player_id]["cards_owned"] += 1
                     card["hidden"] = not card["hidden"]
                     card["owner"] = player_list[player_id]["name"]
+                    turned_ids.append(i)
 
                 elif card["owner"] == player_list[player_id]["name"]:
                     if (len(player_list[player_id]["placed"]) == 0 and len(placed_cards) == 0):
@@ -290,6 +340,7 @@ while main:
                         placed_cards.append(card)
                         player_list[player_id]["placed"].append(card)
                         card_collection.remove(card)
+                        placed_ids.append(i)
 
                     elif len(player_list[player_id]["placed"]) > 0:
                         if player_list[player_id]["placed"][0]["x"] == card["x"]:
@@ -298,6 +349,7 @@ while main:
                             placed_cards.append(card)
                             player_list[player_id]["placed"].append(card)
                             card_collection.remove(card)
+                            placed_ids.append(i)
 
                     elif (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) and len(player_list[player_id]["placed"]) < 1:
                         card["pos_multiplier"] = 0
@@ -305,6 +357,7 @@ while main:
                         placed_cards.append(card)
                         player_list[player_id]["placed"].append(card)
                         card_collection.remove(card)
+                        placed_ids.append(i)
 
         if len(placed_cards) > 0:
             if (placed_cards[-1]["y"] == card["y"] or placed_cards[-1]["x"] == card["x"]) and card["owner"] == player_list[player_id]["name"]:
@@ -331,7 +384,7 @@ while main:
 
 
     # checking if someone has won
-    if hidden_cards_num <= 0:
+    if hidden_cards_num <= 0 and singleplayer:
         winner = " "
         for player in player_list:
             if player["cards_owned"] <= 0:

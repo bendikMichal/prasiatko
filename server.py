@@ -4,7 +4,7 @@ from random import *
 from math import *
 from sys import platform
 
-PORT = 5050
+PORT = 5151
 SERVER_IP = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER_IP, PORT)
 
@@ -36,7 +36,7 @@ placed_cards = []
 hidden_cards_num = 32
 
 def clientListener(connection, addr, userID):
-    global users, currentID
+    global users, currentID, placed_cards, card_collection, hidden_cards_num
 
     connected = True
     while connected:
@@ -54,17 +54,41 @@ def clientListener(connection, addr, userID):
         elif len(msg) > 0:
             if msg[:5] == "name:":
                 users[userID]["name"] = msg[5:]
+
             elif msg == END_TURN:
                 currentID += 1
                 users[userID]["waiting"] = True
                 info("next from {0}".format(users[userID]["name"]))
+
+            elif msg[:6] == "turnd:":
+                turned_string = msg[6:]
+                turned_string = turned_string.split(";")
+                for t in turned_string:
+                    for card in card_collection:
+                        card_id = int(card["x"] + card["y"] * 8)
+                        if card_id == int(t):
+                            card["hidden"] = False
+                            card["owner"] = users[userID]["name"]
+                            hidden_cards_num -= 1
+
+            elif msg[:6] == "place:":
+                placed_string = msg[6:]
+                placed_string = placed_string.split(";")
+                for p in placed_string:
+                    for card in card_collection:
+                        card_id = int(card["x"] + card["y"] * 8)
+                        if int(p) == card_id:
+                            card["pos_multiplier"] = 0
+                            placed_cards.append(card)
+                            card_collection.remove(card)
+
             else:
                 message(msg)
 
 
 
 def handleClient(connection, addr, userID):
-    global users, userTemplate, currentID, orders, card_angles
+    global users, userTemplate, currentID, orders, card_angles, card_collection, placed_cards
 
     def message(text):
         text = (text + ' ' * (MSG_SIZE - len(text))).encode(FORMAT)
@@ -91,11 +115,36 @@ def handleClient(connection, addr, userID):
             if users[userID]["waiting"] and currentID == userID:
                 users[userID]["waiting"] = False
 
+                cards_owned = []
+                cards_others = []
+                for card in card_collection:
+                    card_id = int(card["x"] + card["y"] * 8)
+                    if card["owner"] == users[userID]["name"] and not card["hidden"]:
+                        cards_owned.append(card_id)
+                    elif card["owner"] != users[userID]["name"] and not card["hidden"]:
+                        cards_others.append(card_id)
+
+                placed_string = ""
+                for p in placed_cards:
+                    card_id = int(p["x"] + p["y"] * 8)
+                    placed_string += (";" * (len(placed_string) > 0)) + str(card_id)
+
+                owned_string = ""
+                for o in cards_owned:
+                    owned_string += (";" * (len(owned_string) > 0)) + str(o)
+
+                others_string = ""
+                for o in cards_others:
+                    others_string += (";" * (len(others_string) > 0)) + str(o)
+
                 angles_string = ""
                 for a in card_angles:
                     angles_string += (";" * (len(angles_string) > 0)) + str(a)[:4]
 
                 message("cards:" + angles_string)
+                message("place:" + placed_string)
+                message("owned:" + owned_string)
+                message("other:" + others_string)
 
                 message(GO)
                 info(users[userID]["name"] + "'s turn")
@@ -110,13 +159,14 @@ def handleClient(connection, addr, userID):
 
 
 def handleCommand():
-    global users, orders
+    global users, orders, socket
 
     while True:
         time.sleep(0.1)
 
         command = input()
         if command == "exit":
+            server.close()
             os._exit(1)
         elif command == "list":
             print(users)
