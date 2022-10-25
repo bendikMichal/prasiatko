@@ -15,6 +15,8 @@ END_TURN = "next"
 KICK = "kick"
 GO = "go"
 TAKEN = "taken"
+WINNER = "winner"
+LOOSER = "looser"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -30,6 +32,9 @@ userTemplate = {
     "waiting": True
 }
 currentID = 0
+
+won = False
+lost = False
 
 card_collection = []
 card_angles = []
@@ -100,7 +105,7 @@ def clientListener(connection, addr, userID):
 
 
 def handleClient(connection, addr, userID):
-    global users, userTemplate, currentID, orders, card_angles, card_collection, placed_cards
+    global users, userTemplate, currentID, orders, card_angles, card_collection, placed_cards, won, lost
 
     def message(text):
         text = (text + ' ' * (MSG_SIZE - len(text))).encode(FORMAT)
@@ -122,6 +127,21 @@ def handleClient(connection, addr, userID):
     connected = True
     while connected:
         time.sleep(0.1)
+
+        if hidden_cards_num <= 0 and userID in users:
+            if not won and not lost:
+                owned = 0
+                for card in card_collection:
+                    if card["owner"] == users[userID]["name"]:
+                        owned += 1
+            if not won:
+                if owned <= 0:
+                    won = True
+                    message(WINNER)
+            elif not lost:
+                if owned > 0 and len(users) <= 1:
+                    lost = True
+                    message(LOOSER)
 
         if len(users) > 0 and userID in users:
             if users[userID]["waiting"] and currentID == userID:

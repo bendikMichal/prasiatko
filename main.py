@@ -1,5 +1,5 @@
 
-import sys, messager, time
+import sys, messager, time, os
 from tkinter import *
 from math import *
 
@@ -9,6 +9,8 @@ usernames = []
 username = ""
 singleplayer = False
 player_id = 0
+winner = " "
+looser = " "
 SERVER_IP = ""
 # 172.16.2.160 
 
@@ -111,7 +113,7 @@ if singleplayer:
     messager.info("singleplayer enabled")
 
 else:
-    import socket, sys, threading, os
+    import socket, sys, threading
 
     PORT = 5151
     ADDR = (SERVER_IP, PORT)
@@ -123,6 +125,8 @@ else:
     KICK = "kick"
     GO = "go"
     TAKEN = "taken"
+    WINNER = "winner"
+    LOOSER = "looser"
 
     try:
         messager.info("attempting to connect to server")
@@ -141,7 +145,7 @@ else:
     message(f"name:{username}")
 
     def listener():
-        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id, no_option
+        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id, no_option, winner
 
         while True:
             time.sleep(0.1)
@@ -152,6 +156,14 @@ else:
             if msg == KICK:
                 message(DISCONNECT)
                 os._exit(1)
+
+            elif msg == WINNER:
+                winner = player_list[player_id]["name"]
+                message(DISCONNECT)
+
+            elif msg == LOOSER:
+                looser = player_list[player_id]["name"]
+                message(DISCONNECT)
 
             elif msg == GO:
                 waiting = False
@@ -386,7 +398,15 @@ while main:
             blitCard(Window, cards_img, [card["x"], card["y"]], [center[0] - card_size[0] / 2 + cos(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"], center[1] - card_size[1] / 2 - sin(card["angle"]) * (radius + radiusEx) * card["pos_multiplier"]], card_size, card["angle"] / 6.28 * 360 - 90, card["hidden"])
 
     # giving player a card when he has nothing to place
-    if no_option and len(placed_cards) > 0 and hidden_cards_num <= 0 and len(player_list[player_id]["placed"]) <= 0 and not player_list[player_id]["taken"] and not waiting:
+    if keys[pygame.K_t] and no_option and len(placed_cards) > 0 and hidden_cards_num <= 0 and len(player_list[player_id]["placed"]) <= 0 and not player_list[player_id]["taken"] and not waiting and player_list[player_id]["cards_owned"] > 0:
+        print("no_option:", no_option)
+        print("placed_cards:", len(placed_cards))
+        print("hidden_cards_num:", hidden_cards_num)
+        print("player_list[player_id][placed]:", player_list[player_id]["placed"])
+        print("not player_list[player_id][taken]:", not player_list[player_id]["taken"])
+        print("player_list[player_id][cards_owned]:", player_list[player_id]["cards_owned"])
+        print("not waiting:", not waiting)
+
         placed_cards[-1]["owner"] = player_list[player_id]["name"]
         placed_cards[-1]["pos_multiplier"] = 1
         card_collection.append(placed_cards[-1].copy())
@@ -405,15 +425,17 @@ while main:
 
     # checking if someone has won
     if hidden_cards_num <= 0 and singleplayer:
-        winner = " "
         for player in player_list:
             if player["cards_owned"] <= 0:
                 winner = player["name"]
                 end = True
 
-        if winner != " ":
-            text = font.render(winner + ' has won!', False, (0, 0, 0))
-            Window.blit(text, (10, 0))
+    if winner != " ":
+        text = font.render(winner + ' has won!', False, (0, 0, 0))
+        Window.blit(text, (10, 0))
+    if looser != " ":
+        text = font.render(looser + ' has lost!', False, (0, 0, 0))
+        Window.blit(text, (10, 0))
 
     if not waiting:
         text = font.render(player_list[player_id]["name"] + "'s turn", False, (0, 0, 0))
