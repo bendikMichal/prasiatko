@@ -145,7 +145,7 @@ else:
     message(f"name:{username}")
 
     def listener():
-        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id, no_option, winner
+        global client, waiting, card_angles, card_collection, placed_cards, player_list, player_id, no_option, winner, looser
 
         while True:
             time.sleep(0.1)
@@ -333,7 +333,6 @@ while main:
 
         if player_list[player_id]["taken"]:
             message(TAKEN)
-            messager.info("takeiejaijaieijrajereanrefj")
 
         message(END_TURN)
 
