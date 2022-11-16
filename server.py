@@ -142,6 +142,8 @@ def handleClient(connection, addr, userID):
                 if owned > 0 and len(users) <= 1:
                     lost = True
                     message(LOOSER)
+            if owned <= 0 and hidden_cards_num <= 0:
+                message(DISCONNECT)
 
         if len(users) > 0 and userID in users:
             if users[userID]["waiting"] and currentID == userID:
